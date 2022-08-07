@@ -11,7 +11,8 @@ from pymoo.operators.mutation.pm import PM
 from pymoo.operators.sampling.rnd import FloatRandomSampling
 from pymoo.termination import get_termination
 from pymoo.optimize import minimize
-from pymoo.util.misc import stack
+from pymoo.decomposition.asf import ASF
+from pymoo.mcdm.pseudo_weights import PseudoWeights
 
 
 class HisProblem(ElementwiseProblem):
@@ -33,32 +34,8 @@ class HisProblem(ElementwiseProblem):
         out["F"] = [f1, f2]
         out["G"] = [g1, g2]
 
-
-class HisTestProblem(HisProblem):
-
-    def _calc_pareto_front(self, flatten=True, *args, **kwargs):
-        f2 = lambda f1: ((f1/100) ** 0.5 - 1)**2
-        F1_a, F1_b = np.linspace(1, 16, 300), np.linspace(36, 81, 300)
-        F2_a, F2_b = f2(F1_a), f2(F1_b)
-
-        pf_a = np.column_stack([F1_a, F2_a])
-        pf_b = np.column_stack([F1_b, F2_b])
-
-        return stack(pf_a, pf_b, flatten=flatten)
-
-    def _calc_pareto_set(self, flatten=True, *args, **kwargs):
-        x1_a = np.linspace(0.1, 0.4, 50)
-        x1_b = np.linspace(0.6, 0.9, 50)
-        x2 = np.zeros(50)
-
-        a, b = np.column_stack([x1_a, x2]), np.column_stack([x1_b, x2])
-        return stack(a,b, flatten=flatten)
-
-
 def main():
-    # problem = HisProblem()
-    problem = HisTestProblem()
-
+    problem = HisProblem()
     algolithm = NSGA2(
         pop_size=40,
         n_offsprings=10,
@@ -78,12 +55,12 @@ def main():
 
     X = res.X
     F = res.F
-    fl = F.min(axis=0)
-    fu = F.max(axis=0)
     approx_ideal = F.min(axis=0)
     approx_nadir = F.max(axis=0)
-    pf_a, pf_b = problem.pareto_front(use_cache=False, flatten=False) 
-    pf = problem.pareto_front(use_cache=False, flatten=True)
+    nF = (F - approx_ideal) / (approx_nadir - approx_ideal)
+    fl = nF.min(axis=0)
+    fu = nF.max(axis=0)
+    weights = np.array([0.2, 0.8])
 
     xl, xu = problem.bounds()
     plt.figure(figsize=(7, 5))
@@ -93,14 +70,8 @@ def main():
     plt.title("Design Space")
     plt.show()
 
-    print(f"Scale f1: [{fl[0]}, {fu[0]}]")
-    print(f"Scale f2: [{fl[1]}, {fu[1]}]")
     plt.figure(figsize=(7, 5))
-    plt.scatter(F[:, 0], F[:, 1], s=30, facecolors="none", edgecolors="blue",
-                label="Solutions")
-    plt.plot(pf_a[:, 0], pf_a[:, 1], alpha=0.5, linewidth=2.0, color="red",
-             label="Pareto-front")
-    plt.plot(pf_b[:, 0], pf_b[:, 1], alpha=0.5, linewidth=2.0, color="red")
+    plt.scatter(F[:, 0], F[:, 1], s=30, facecolors="none", edgecolors="blue")
     plt.scatter(approx_ideal[0], approx_ideal[1], facecolors="none",
                 edgecolors="red", marker="*", s = 100,
                 label="Ideal Point (Approx)")
@@ -110,6 +81,30 @@ def main():
     plt.title("Objective Space")
     plt.legend()
     plt.show()
+
+    print(f"Scale f1: [{fl[0]}, {fu[0]}]")
+    print(f"Scale f2: [{fl[1]}, {fu[1]}]")
+    plt.figure(figsize=(7, 5))
+    plt.scatter(nF[:, 0], nF[:, 1], s=30, facecolors="none", edgecolors="blue")
+    plt.title("Objective Space")
+    plt.show()
+
+    decomp = ASF()
+    i = decomp.do(nF, 1/weights).argmin()
+    plt.figure(figsize=(7, 5))
+    plt.scatter(F[:, 0], F[:, 1], s=30, facecolors="none", edgecolors="blue")
+    plt.scatter(F[i, 0], F[i, 1], marker="x", color="red", s=200)
+    plt.title("Objective Space")
+    plt.show()
+
+    i = PseudoWeights(weights).do(nF)
+    print("Best regarding Pseudo Weights: Point \ni = %s\nF = %s" % (i, F[i]))
+    plt.figure(figsize=(7, 5))
+    plt.scatter(F[:, 0], F[:, 1], s=30, facecolors="none", edgecolors="blue")
+    plt.scatter(F[i, 0], F[i, 1], marker="x", color="red", s=200)
+    plt.title("Objective Space")
+    plt.show()
+
 
 
 

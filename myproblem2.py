@@ -1,6 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 import numpy as np
 
 from pymoo.algorithms.moo.nsga2 import NSGA2
@@ -19,30 +16,26 @@ class MyProblem(ElementwiseProblem):
                          xu=np.array([2, 2]))
 
     def _evaluate(self, x, out, *args, **kwargs):
-        f1 = 100 * (x[0]**2 + x[1]**2)
-        f2 = (x[0] - 1)**2 + x[1]**2
+        f1 = 100 * (x[0] ** 2 + x[1] ** 2)
+        f2 = (x[0] - 1) ** 2 + x[1] ** 2
 
         g1 = 2 * (x[0] - 0.1) * (x[0] - 0.9) / 0.18
-        g2 = -20 * (x[0] - 0.4) * (x[0] - 0.6) / 4.8
+        g2 = - 20 * (x[0] - 0.4) * (x[0] - 0.6) / 4.8
 
         out["F"] = [f1, f2]
         out["G"] = [g1, g2]
 
 
-def main():
-    problem = MyProblem()
-    algorithm = NSGA2(pop_size=100)
+problem = MyProblem()
 
-    res = minimize(problem,
-                   algorithm,
-                   ("n_gen", 100),
-                   verbose=False,
-                   seed=1)
+algorithm = NSGA2(pop_size=100)
 
-    plot = Scatter()
-    plot.add(res.F, edgecolor="red", facecolor="none")
-    plot.show()
+res = minimize(problem,
+               algorithm,
+               ("n_gen", 100),
+               verbose=False,
+               seed=1)
 
-
-if __name__ == '__main__':
-    main()
+plot = Scatter()
+plot.add(res.F, edgecolor="red", facecolor="none")
+plot.show()
