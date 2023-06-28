@@ -31,7 +31,7 @@ res = minimize(
     verbose=True,
 )
 
-# 結果の可視化
+# 結果を可視化する
 plot = Scatter()
 plot.add(problem.pareto_front(), plot_type="line", color="black", alpha=0.7)
 plot.add(res.F, color="red")
